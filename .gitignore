@@ -1,0 +1,23 @@
+# Local viewer data and imports
+/python_storage/
+/wwwroot/storage/*
+!/wwwroot/storage/.htaccess
+
+# SQLite databases and sidecar files
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+
+# Sensitive WhatsApp exports/imports
+*.zip
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local secrets
+.env
+.env.*
