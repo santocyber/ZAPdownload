@@ -9,6 +9,35 @@ O repositorio contem duas implementacoes independentes do mesmo viewer:
 
 As duas versoes usam bancos e storages separados. Dados importados na versao Python nao aparecem automaticamente na versao PHP, e vice-versa.
 
+## Baixar E Executar Rapido Com Python
+
+Clone o repositorio:
+
+```bash
+git clone https://github.com/santocyber/ZAPdownload.git
+cd ZAPdownload
+```
+
+Verifique/crie o banco e as pastas locais:
+
+```bash
+python3 zapviewer.py --check
+```
+
+Inicie o servidor Python:
+
+```bash
+python3 zapviewer.py
+```
+
+Acesse no navegador:
+
+```text
+http://localhost:8001
+```
+
+A versao Python nao precisa instalar dependencias externas. Ela usa apenas a biblioteca padrao do Python e salva os dados em `python_storage/`.
+
 ## Funcionalidades
 
 - Importacao de exports `.txt` do WhatsApp.
