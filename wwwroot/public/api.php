@@ -66,7 +66,7 @@ SELECT m.id, m.conversation_id, m.sender, m.body, m.sent_at, m.media_path, m.raw
 FROM messages m
 JOIN conversations c ON c.id = m.conversation_id
 WHERE m.conversation_id = :conversation_id AND c.user_id = :user_id
-ORDER BY m.id ASC
+ORDER BY m.sent_at DESC, m.id DESC
 LIMIT :limit OFFSET :offset
 SQL);
     $stmt->bindValue(':conversation_id', $conversationId, PDO::PARAM_INT);

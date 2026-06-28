@@ -5,6 +5,7 @@ const state = {
   timers: {
     globalSearch: null,
     chatSearch: null,
+    loadMore: null,
   },
   requests: {
     conversations: 0,
@@ -12,6 +13,10 @@ const state = {
     globalSearch: 0,
     chatSearch: 0,
   },
+  messagesOffset: 0,
+  allMessages: [],
+  allMessagesLoaded: false,
+  loadingMore: false,
 };
 
 const elements = {
@@ -300,20 +305,59 @@ async function openConversation(conversationId, options = {}) {
 
 async function loadMessages(conversationId) {
   const requestId = ++state.requests.messages;
+  state.messagesOffset = 0;
+  state.allMessages = [];
+  state.allMessagesLoaded = false;
+  state.loadingMore = false;
+
   elements.messages.classList.remove("empty-state");
   elements.messages.innerHTML =
     '<div class="loading">Carregando mensagens...</div>';
 
   try {
     const data = await fetchJson(
-      `api.php?action=messages&conversation_id=${conversationId}&limit=2000`,
+      `api.php?action=messages&conversation_id=${conversationId}&limit=2000&offset=0`,
     );
 
     if (requestId !== state.requests.messages) return;
 
-    renderMessages(data.messages);
+    state.allMessages = data.messages;
+    state.messagesOffset = state.allMessages.length;
+    state.allMessagesLoaded = data.messages.length < 2000;
+
+    renderMessages(state.allMessages);
   } catch (error) {
     showError(error.message || "Nao foi possivel carregar mensagens.");
+  }
+}
+
+async function loadMoreMessages() {
+  if (state.loadingMore || state.allMessagesLoaded || !state.activeConversationId) return;
+
+  state.loadingMore = true;
+
+  try {
+    const data = await fetchJson(
+      `api.php?action=messages&conversation_id=${state.activeConversationId}&limit=2000&offset=${state.messagesOffset}`,
+    );
+
+    if (data.messages.length === 0) {
+      state.allMessagesLoaded = true;
+      state.loadingMore = false;
+      renderMessages(state.allMessages);
+      return;
+    }
+
+    state.allMessages = [...state.allMessages, ...data.messages];
+    state.messagesOffset += data.messages.length;
+    state.allMessagesLoaded = data.messages.length < 2000;
+
+    state.loadingMore = false;
+    renderMessages(state.allMessages);
+  } catch (error) {
+    showError(error.message || "Erro ao carregar mais mensagens.");
+  } finally {
+    state.loadingMore = false;
   }
 }
 
@@ -328,7 +372,7 @@ function renderMessages(messages, options = {}) {
     return;
   }
 
-  elements.messages.innerHTML = messages
+  let html = messages
     .map((message) => {
       const mine = ["voce", "you"].includes(
         String(message.sender || "").toLowerCase(),
@@ -350,8 +394,18 @@ function renderMessages(messages, options = {}) {
     })
     .join("");
 
+  if (!isSearch && !state.allMessagesLoaded) {
+    html =
+      html +
+      `<button class="load-more-btn" type="button" ${state.loadingMore ? "disabled" : ""}>
+        ${state.loadingMore ? "Carregando..." : "Carregar mensagens mais antigas"}
+      </button>`;
+  }
+
+  elements.messages.innerHTML = html;
+
   if (!isSearch) {
-    elements.messages.scrollTop = elements.messages.scrollHeight;
+    elements.messages.scrollTop = 0;
   }
 }
 
@@ -693,6 +747,13 @@ elements.conversationList.addEventListener("click", (event) => {
 });
 
 elements.messages.addEventListener("click", (event) => {
+  const loadMoreBtn = event.target.closest(".load-more-btn");
+
+  if (loadMoreBtn) {
+    loadMoreMessages();
+    return;
+  }
+
   const item = event.target.closest(".jump-conversation");
 
   if (item) {

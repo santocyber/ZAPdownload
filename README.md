@@ -47,6 +47,9 @@ A versao Python nao precisa instalar dependencias externas. Ela usa apenas a bib
 - Gerenciamento de usuarios por admin.
 - Conversas, uploads e midias vinculados ao usuario logado.
 - Busca geral e busca dentro do chat, com filtros de data.
+- Mensagens ordenadas das mais recentes para as mais antigas.
+- Paginacao com carregamento sob demanda em lotes de 2000 mensagens.
+- Botao "Carregar mensagens mais antigas" para navegar pelo historico completo.
 - Persistencia em SQLite.
 - Midias servidas por endpoint protegido, com validacao de caminho e usuario.
 

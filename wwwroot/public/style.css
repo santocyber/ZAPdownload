@@ -527,6 +527,31 @@ progress::-moz-progress-bar {
   font-weight: 800;
 }
 
+.load-more-btn {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  color: var(--accent);
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  text-align: center;
+}
+
+.load-more-btn:hover {
+  background: rgba(0, 168, 132, 0.08);
+  border-color: var(--accent);
+}
+
+.load-more-btn:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 mark {
   border-radius: 4px;
   padding: 0 2px;
