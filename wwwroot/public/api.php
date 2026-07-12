@@ -13,6 +13,7 @@ try {
         'messages' => messages(),
         'search' => search_messages(),
         'delete_conversation' => delete_conversation(),
+        'rename_conversation' => rename_conversation(),
         default => fail_response('Acao invalida.', 404),
     };
 } catch (Throwable $exception) {
@@ -285,6 +286,34 @@ SQL);
         'success' => true,
         'deleted_id' => $conversationId,
     ]);
+}
+
+function rename_conversation(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        fail_response('Metodo nao permitido.', 405);
+    }
+
+    $payload = request_json();
+    $conversationId = max(0, (int) ($payload['conversation_id'] ?? 0));
+    $title = trim((string) ($payload['title'] ?? ''));
+
+    if ($conversationId < 1 || $title === '') {
+        fail_response('Dados invalidos.', 400);
+    }
+
+    $db = Database::connection();
+    $stmt = $db->prepare('SELECT id FROM conversations WHERE id = :id AND user_id = :user_id');
+    $stmt->execute([':id' => $conversationId, ':user_id' => current_user_id()]);
+
+    if (!$stmt->fetch()) {
+        fail_response('Conversa nao encontrada.', 404);
+    }
+
+    $update = $db->prepare('UPDATE conversations SET title = :title WHERE id = :id AND user_id = :user_id');
+    $update->execute([':title' => $title, ':id' => $conversationId, ':user_id' => current_user_id()]);
+
+    json_response(['success' => true, 'title' => $title]);
 }
 
 function delete_inside_storage(string $root, string $relativePath): void

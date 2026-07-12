@@ -39,18 +39,77 @@ if (!$stmt->fetchColumn()) {
     exit('Acesso negado.');
 }
 
-$mime = 'application/octet-stream';
+$size = filesize($path);
+$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
-if (class_exists('finfo')) {
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $detected = $finfo->file($path);
+$mimeMap = [
+    'mp3'  => 'audio/mpeg',
+    'm4a'  => 'audio/mp4',
+    'opus' => 'audio/ogg',
+    'ogg'  => 'audio/ogg',
+    'wav'  => 'audio/wav',
+    'aac'  => 'audio/aac',
+    'mp4'  => 'video/mp4',
+    'mov'  => 'video/quicktime',
+    'm4v'  => 'video/mp4',
+    '3gp'  => 'video/3gpp',
+    'jpg'  => 'image/jpeg',
+    'jpeg' => 'image/jpeg',
+    'png'  => 'image/png',
+    'gif'  => 'image/gif',
+    'webp' => 'image/webp',
+    'pdf'  => 'application/pdf',
+    'doc'  => 'application/msword',
+    'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+];
 
-    if (is_string($detected) && $detected !== '') {
-        $mime = $detected;
+$mime = $mimeMap[$ext] ?? null;
+
+if ($mime === null) {
+    if (class_exists('finfo')) {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $detected = $finfo->file($path);
+        $mime = (is_string($detected) && $detected !== '') ? $detected : 'application/octet-stream';
+    } else {
+        $mime = 'application/octet-stream';
     }
 }
 
+$isMedia = str_starts_with($mime, 'audio/') || str_starts_with($mime, 'video/');
+
+header('Accept-Ranges: bytes');
 header('Content-Type: ' . $mime);
-header('Content-Length: ' . filesize($path));
-header('Content-Disposition: inline; filename="' . basename($path) . '"');
-readfile($path);
+header('Cache-Control: no-cache, must-revalidate');
+
+if (isset($_SERVER['HTTP_RANGE'])) {
+    preg_match('/bytes=(\d+)-(\d*)/', $_SERVER['HTTP_RANGE'], $matches);
+    $start = (int) $matches[1];
+    $end = $matches[2] !== '' ? (int) $matches[2] : $size - 1;
+
+    if ($start >= $size || $start > $end) {
+        http_response_code(416);
+        header('Content-Range: bytes */' . $size);
+        exit;
+    }
+
+    http_response_code(206);
+    header("Content-Range: bytes $start-$end/$size");
+    header('Content-Length: ' . ($end - $start + 1));
+
+    if (!$isMedia) {
+        header('Content-Disposition: inline; filename="' . basename($path) . '"');
+    }
+
+    $fp = fopen($path, 'rb');
+    fseek($fp, $start);
+    echo fread($fp, $end - $start + 1);
+    fclose($fp);
+} else {
+    header('Content-Length: ' . $size);
+
+    if (!$isMedia) {
+        header('Content-Disposition: inline; filename="' . basename($path) . '"');
+    }
+
+    readfile($path);
+}

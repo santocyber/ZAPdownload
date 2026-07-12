@@ -86,7 +86,47 @@ button {
 }
 
 .chat-title-block {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: min(260px, 100%);
+}
+
+.chat-title-text {
+  margin-right: 4px;
+}
+
+.chat-title-edit {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.chat-header:hover .chat-title-edit {
+  opacity: 1;
+}
+
+.chat-title-edit:hover {
+  background: var(--panel-soft);
+}
+
+.chat-title-input {
+  width: 100%;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  outline: 0;
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--panel-soft);
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .brand h1,
@@ -369,9 +409,16 @@ progress::-moz-progress-bar {
   cursor: pointer;
 }
 
+.conversation-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 0;
+}
+
 .delete-conversation {
-  align-self: center;
-  justify-self: center;
   width: 30px;
   height: 30px;
   border: 1px solid rgba(255, 123, 123, 0.38);
@@ -386,6 +433,21 @@ progress::-moz-progress-bar {
 .delete-conversation:hover {
   color: white;
   background: #d83b3b;
+}
+
+.rename-conversation {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(0, 168, 132, 0.38);
+  border-radius: 999px;
+  color: #a0e8d6;
+  background: rgba(0, 168, 132, 0.15);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.rename-conversation:hover {
+  background: rgba(0, 168, 132, 0.3);
 }
 
 .avatar {

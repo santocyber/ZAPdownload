@@ -271,7 +271,10 @@ function renderConversations() {
               <b>${conversation.message_count}</b>
             </span>
           </button>
-          <button class="delete-conversation" data-delete-id="${conversation.id}" type="button" title="Apagar conversa">X</button>
+          <div class="conversation-actions">
+            <button class="delete-conversation" data-delete-id="${conversation.id}" type="button" title="Apagar conversa">X</button>
+            <button class="rename-conversation" data-rename-id="${conversation.id}" type="button" title="Renomear conversa">✏</button>
+          </div>
         </div>
       `;
     })
@@ -294,13 +297,17 @@ async function openConversation(conversationId, options = {}) {
   renderConversations();
 
   const conversation = findConversation(state.activeConversationId);
-  elements.chatTitle.textContent = conversation?.title || "Conversa";
+  renderChatTitle(conversation?.title || "Conversa");
   elements.chatSubtitle.textContent = "Mensagens importadas";
   elements.messageCount.textContent = conversation
     ? `${conversation.message_count} mensagens`
     : "";
 
   await loadMessages(state.activeConversationId);
+
+  if (options.startRename) {
+    startRename();
+  }
 }
 
 async function loadMessages(conversationId) {
@@ -671,6 +678,49 @@ function findConversation(conversationId) {
   );
 }
 
+function renderChatTitle(title) {
+  elements.chatTitle.innerHTML =
+    `<span class="chat-title-text">${escapeHtml(title)}</span>` +
+    `<button class="chat-title-edit" type="button" title="Renomear conversa">✏</button>`;
+}
+
+function startRename() {
+  const span = elements.chatTitle.querySelector(".chat-title-text");
+  const currentTitle = span ? span.textContent : "";
+  elements.chatTitle.innerHTML =
+    `<input type="text" class="chat-title-input" value="${escapeHtml(currentTitle)}" maxlength="200">`;
+  const input = elements.chatTitle.querySelector(".chat-title-input");
+  input.focus();
+  input.select();
+}
+
+async function saveRename(newTitle) {
+  newTitle = newTitle.trim();
+  if (!newTitle || !state.activeConversationId) {
+    const conv = findConversation(state.activeConversationId);
+    renderChatTitle(conv?.title || "Conversa");
+    return;
+  }
+
+  try {
+    await fetchJson("api.php?action=rename_conversation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        conversation_id: state.activeConversationId,
+        title: newTitle,
+      }),
+    });
+
+    renderChatTitle(newTitle);
+    await loadConversations();
+  } catch (error) {
+    showError(error.message || "Erro ao renomear.");
+    const conv = findConversation(state.activeConversationId);
+    renderChatTitle(conv?.title || "Conversa");
+  }
+}
+
 async function deleteConversation(conversationId) {
   const conversation = findConversation(conversationId);
   const title = conversation?.title || "esta conversa";
@@ -730,6 +780,20 @@ elements.clearChatSearch.addEventListener("click", () =>
 );
 
 elements.conversationList.addEventListener("click", (event) => {
+  const renameButton = event.target.closest("[data-rename-id]");
+
+  if (renameButton) {
+    const conversationId = Number(renameButton.dataset.renameId);
+
+    if (state.activeConversationId !== conversationId) {
+      openConversation(conversationId, { startRename: true });
+    } else {
+      startRename();
+    }
+
+    return;
+  }
+
   const deleteButton = event.target.closest("[data-delete-id]");
 
   if (deleteButton) {
@@ -759,6 +823,32 @@ elements.messages.addEventListener("click", (event) => {
   if (item) {
     openConversation(item.dataset.openId);
   }
+});
+
+elements.chatTitle.addEventListener("click", (event) => {
+  if (event.target.closest(".chat-title-edit")) {
+    startRename();
+  }
+});
+
+elements.chatTitle.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    const conv = findConversation(state.activeConversationId);
+    renderChatTitle(conv?.title || "Conversa");
+    return;
+  }
+
+  if (event.key === "Enter") {
+    const input = event.target.closest(".chat-title-input");
+    if (!input) return;
+    saveRename(input.value);
+  }
+});
+
+elements.chatTitle.addEventListener("focusout", () => {
+  const input = elements.chatTitle.querySelector(".chat-title-input");
+  if (!input) return;
+  saveRename(input.value);
 });
 
 [
