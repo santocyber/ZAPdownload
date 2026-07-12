@@ -2,12 +2,56 @@
 
 Aplicacao local para importar exportacoes do WhatsApp (`.txt` ou `.zip`), visualizar conversas, pesquisar mensagens e abrir midias anexadas.
 
-O repositorio contem duas implementacoes independentes do mesmo viewer:
+O repositorio contem tres implementacoes independentes do mesmo viewer:
 
+- `desktop-electron/`: app desktop standalone com Electron, sem login, sem Python/PHP e sem navegador externo.
 - `zapviewer.py`: versao Python monolitica, sem dependencias externas, com servidor HTTP proprio.
 - `wwwroot/`: versao PHP + JavaScript para rodar com servidor PHP embutido, Nginx ou PHP-FPM.
 
-As duas versoes usam bancos e storages separados. Dados importados na versao Python nao aparecem automaticamente na versao PHP, e vice-versa.
+As tres versoes usam bancos e storages separados. Dados importados em uma versao nao aparecem automaticamente nas outras.
+
+## App Desktop Standalone
+
+A versao desktop fica em `desktop-electron/` e gera pacotes locais para Windows, macOS e Linux:
+
+```text
+ZapViewer-Windows.exe
+ZapViewer-macOS.dmg
+ZapViewer-Linux.AppImage
+```
+
+Caracteristicas:
+
+- Interface desktop propria com Electron e Chromium embutido.
+- Nao precisa Python, PHP, Apache, Nginx ou navegador externo.
+- Funciona offline.
+- Nao tem login; e um app local para uso pessoal.
+- Importa exports `.txt` e `.zip` do WhatsApp.
+- Extrai midias de `.zip` e abre arquivos locais.
+- Usa SQLite local.
+- Tem tema claro, escuro e automatico pelo sistema.
+
+Para desenvolvimento:
+
+```bash
+cd desktop-electron
+npm ci
+npm run dev
+```
+
+Para gerar o pacote do sistema atual:
+
+```bash
+npm run dist
+```
+
+Cada sistema deve gerar seu proprio pacote:
+
+- Windows gera `release/ZapViewer-Windows.exe`.
+- macOS gera `release/ZapViewer-macOS.dmg`.
+- Linux gera `release/ZapViewer-Linux.AppImage`.
+
+Tambem existe um workflow em `.github/workflows/desktop-electron-release.yml` para gerar os tres pacotes automaticamente em GitHub Actions.
 
 ## Baixar E Executar Rapido Com Python
 
@@ -40,6 +84,18 @@ A versao Python nao precisa instalar dependencias externas. Ela usa apenas a bib
 
 ## Funcionalidades
 
+Desktop Electron:
+
+- App standalone sem navegador externo.
+- Importacao de exports `.txt` e `.zip`.
+- Extracao de midias de arquivos `.zip`.
+- Busca de mensagens.
+- Persistencia local em SQLite.
+- Tema claro, escuro e automatico.
+- Sem login e sem usuarios.
+
+Versoes Python/PHP:
+
 - Importacao de exports `.txt` do WhatsApp.
 - Importacao de exports `.zip` com extracao de midias.
 - Upload em chunks de 2 MB para arquivos grandes.
@@ -55,9 +111,50 @@ A versao Python nao precisa instalar dependencias externas. Ela usa apenas a bib
 
 ## Escolha Da Versao
 
+Use a versao desktop Electron se quiser um aplicativo standalone, offline, sem login, sem Python/PHP e sem abrir navegador externo.
+
 Use a versao Python se quiser rodar tudo com um unico arquivo e sem configurar PHP/Nginx.
 
 Use a versao PHP se quiser deploy em hospedagem ou VPS com PHP-FPM/Nginx.
+
+## Rodar A Versao Desktop Electron
+
+Requisitos para desenvolvimento/build:
+
+- Node.js 20+ ou 22+.
+- npm.
+- Git.
+- No macOS, `xcode-select --install`.
+- No Windows, Visual Studio Build Tools pode ser necessario se `better-sqlite3` precisar compilar.
+
+Instale dependencias:
+
+```bash
+cd desktop-electron
+npm ci
+```
+
+Rode em modo desenvolvimento:
+
+```bash
+npm run dev
+```
+
+Gere o pacote do sistema atual:
+
+```bash
+npm run dist
+```
+
+Saidas esperadas:
+
+```text
+desktop-electron/release/ZapViewer-Windows.exe
+desktop-electron/release/ZapViewer-macOS.dmg
+desktop-electron/release/ZapViewer-Linux.AppImage
+```
+
+Observacao: o pacote macOS deve ser gerado no macOS. O pacote Windows e mais confiavel quando gerado no Windows, principalmente por causa de dependencias nativas como `better-sqlite3`.
 
 ## Rodar A Versao Python
 
@@ -139,6 +236,16 @@ Usuarios comuns acessam apenas as proprias conversas. Admins tambem acessam apen
 
 ## Como Importar Conversas
 
+Desktop Electron:
+
+1. Abra o app desktop.
+2. Clique em `Importar .txt ou .zip`.
+3. Selecione o export do WhatsApp.
+4. Aguarde a importacao local.
+5. Abra a conversa na lateral, pesquise mensagens e abra midias quando necessario.
+
+Python/PHP:
+
 1. No WhatsApp, exporte uma conversa como `.txt` ou `.zip`.
 2. Use `.txt` para importar apenas mensagens.
 3. Use `.zip` para importar mensagens e midias exportadas.
@@ -149,6 +256,37 @@ Usuarios comuns acessam apenas as proprias conversas. Admins tambem acessam apen
 8. Abra a conversa na lateral e use busca/filtros conforme necessario.
 
 ## Storage E Banco
+
+Versao Desktop Electron:
+
+Windows:
+
+```text
+C:\Users\Usuario\AppData\Roaming\ZapViewer\
+```
+
+macOS:
+
+```text
+~/Library/Application Support/ZapViewer/
+```
+
+Linux:
+
+```text
+~/.config/ZapViewer/
+```
+
+Conteudo principal:
+
+```text
+database.sqlite
+uploads/
+extracts/
+media/
+temp/
+backups/
+```
 
 Versao Python:
 
@@ -170,12 +308,21 @@ wwwroot/storage/media/
 wwwroot/storage/extracts/
 ```
 
-Evite apagar essas pastas se quiser manter usuarios, sessoes, conversas, uploads e midias importadas.
+Evite apagar essas pastas se quiser manter usuarios, sessoes, conversas, uploads e midias importadas. Na versao desktop, apagar a pasta de dados local remove as conversas importadas do app.
 
 ## Estrutura Do Projeto
 
 ```text
 .
+  desktop-electron/         App desktop standalone com Electron
+    package.json            Scripts, dependencias e config do electron-builder
+    src/
+      main/                 Processo principal, SQLite, importador e IPC
+      preload/              Ponte segura entre Electron e interface
+      renderer/             Interface desktop
+    release/                Pacotes gerados localmente, ignorados pelo Git
+  .github/workflows/
+    desktop-electron-release.yml  Build dos pacotes desktop no GitHub Actions
   zapviewer.py              Versao Python monolitica
   python_storage/           Dados persistidos da versao Python
   wwwroot/
@@ -199,6 +346,19 @@ Evite apagar essas pastas se quiser manter usuarios, sessoes, conversas, uploads
 
 ## Verificacao
 
+Desktop Electron, a partir de `desktop-electron/`:
+
+```bash
+npm run typecheck
+npm run build
+```
+
+Gerar pacote local:
+
+```bash
+npm run dist
+```
+
 Python:
 
 ```bash
@@ -216,6 +376,50 @@ Validar apenas um arquivo PHP alterado:
 ```bash
 php -l public/api.php
 ```
+
+## Releases Desktop
+
+O workflow `Desktop Electron Release` roda em tags `v*` e tambem pode ser iniciado manualmente pelo GitHub Actions.
+
+Para criar uma release por tag:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+O workflow usa:
+
+```text
+windows-latest -> ZapViewer-Windows.exe
+macos-latest   -> ZapViewer-macOS.dmg
+ubuntu-latest  -> ZapViewer-Linux.AppImage
+```
+
+Os artefatos sao enviados para a release quando a tag e publicada.
+
+## Problemas Comuns No Desktop
+
+macOS:
+
+```bash
+xcode-select --install
+npm rebuild better-sqlite3
+npm run dist
+```
+
+Se o macOS bloquear o app por falta de assinatura, use `Botao direito > Abrir` ou autorize em `Ajustes do Sistema > Privacidade e Seguranca`.
+
+Windows:
+
+- Use Node.js LTS.
+- Se `better-sqlite3` falhar, instale Visual Studio Build Tools com `Desktop development with C++`.
+- O SmartScreen pode alertar executaveis nao assinados.
+
+Linux:
+
+- O AppImage e gerado por `npm run dist`.
+- Algumas distribuicoes podem exigir bibliotecas graficas basicas do Electron.
 
 ## Deploy PHP Com Nginx
 
